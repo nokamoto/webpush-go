@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
@@ -115,9 +116,7 @@ func newCiphertext(plaintext string, CEK, NONCE []byte) ([]byte, error) {
 	return aesgcm.Seal(nil, NONCE, b, nil), nil
 }
 
-// Encrypt encrypts `plaintext` using an encrypted content encoding [https://tools.ietf.org/html/rfc8188].
-// https://tools.ietf.org/html/rfc8291
-func Encrypt(asPublic, asPrivate, uaPublic, authSecret, salt []byte, plaintext string) ([]byte, error) {
+func encrypt(asPublic, asPrivate, uaPublic, authSecret, salt []byte, plaintext string) ([]byte, error) {
 	ecdhSecret, err := newEcdhSecret(asPrivate, uaPublic)
 	if err != nil {
 		return nil, err
@@ -146,4 +145,38 @@ func Encrypt(asPublic, asPrivate, uaPublic, authSecret, salt []byte, plaintext s
 	header := newHeader(salt, asPublic)
 
 	return append(header, ciphertext...), nil
+}
+
+func newKeyPair() ([]byte, []byte, error) {
+	priv, x, y, err := elliptic.GenerateKey(curve, rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	pub := elliptic.Marshal(curve, x, y)
+	return priv, pub, nil
+}
+
+func random(l int) ([]byte, error) {
+	buf := make([]byte, l)
+	_, err := io.ReadFull(rand.Reader, buf)
+	if err != nil {
+		return nil, fmt.Errorf("ReadFull(rand.Reader, byte[%d]) - %v", l, err)
+	}
+	return buf, nil
+}
+
+// Encrypt encrypts `plaintext` using an encrypted content encoding [https://tools.ietf.org/html/rfc8188].
+// https://tools.ietf.org/html/rfc8291
+func Encrypt(uaPublic, authSecret []byte, plaintext string) ([]byte, error) {
+	asPrivate, asPublic, err := newKeyPair()
+	if err != nil {
+		return nil, err
+	}
+
+	salt, err := random(16)
+	if err != nil {
+		return nil, err
+	}
+
+	return encrypt(asPublic, asPrivate, uaPublic, authSecret, salt, plaintext)
 }
