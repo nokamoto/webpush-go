@@ -91,6 +91,6 @@ func Test_newHeader(t *testing.T) {
 	check1(header, t, newHeader(decode(salt), decode(asPublic)))
 }
 
-func Test_Encrypt(t *testing.T) {
-	check(message, t)(Encrypt(decode(asPublic), decode(asPrivate), decode(uaPublic), decode(authSecret), decode(salt), plaintext))
+func Test_encrypt(t *testing.T) {
+	check(message, t)(encrypt(decode(asPublic), decode(asPrivate), decode(uaPublic), decode(authSecret), decode(salt), plaintext))
 }
