@@ -3,19 +3,25 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.11
+      - image: nokamoto13/webpush-testing-service:0.0.0
     working_directory: /go/src/github.com/nokamoto/webpush-go
     steps:
       - checkout
       - run:
-          command: test -z "$(gofmt -l ./*.go)"
+          name: gofmt
+          command: |
+            test -z "$(gofmt -l ./*.go)"
+            test -z "$(gofmt -l ./webpush-testing-service/*.go)"
       - run:
           name: lint
           command: |
             go get -u golang.org/x/lint/golint
             golint -set_exit_status ./*.go
+            golint -set_exit_status ./webpush-testing-service/*.go
       - run:
           name: test
           command: |
             go get -u github.com/golang/dep/cmd/dep
             dep ensure -vendor-only=true
             go test .
+            go test ./webpush-testing-service
